@@ -16,6 +16,27 @@ type AuthResponse struct {
 	Token string `json:"token"`
 }
 
+type User struct {
+	Avatar          string   `json:"avatar"`
+	CollectionId    string   `json:"collectionId"`
+	CollectionName  string   `json:"collectionName"`
+	Company         string   `json:"company"`
+	Created         string   `json:"created"`
+	CreatedBy       string   `json:"createdBy"`
+	Email           string   `json:"email"`
+	EmailVisibility bool     `json:"emailVisibility"`
+	FirstName       string   `json:"firstName"`
+	Groups          []string `json:"groups"`
+	Id              string   `json:"id"`
+	JPort           int      `json:"jPort"`
+	JToken          string   `json:"jToken"`
+	LastName        string   `json:"lastName"`
+	Role            string   `json:"role"`
+	Updated         string   `json:"updated"`
+	Username        string   `json:"username"`
+	Verified        bool     `json:"verified"`
+}
+
 type SchedulerResponse struct {
 	CollectionId   string `json:"collectionId"`
 	CollectionName string `json:"collectionName"`
