@@ -145,7 +145,10 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	fmt.Println("Source:", notebook.Content.Cells[3].Source)
+	for _, cell := range notebook.Content.Cells {
+		fmt.Println("Type:", cell.CellType)
+		fmt.Println("Source:", cell.Source)
+	}
 
 	contentType := response.Header.Get("Content-Type")
 
