@@ -8,7 +8,7 @@ import (
 	"jupyter-hub-executor/entity"
 )
 
-func TokenGet() (string, error) {
+func GetToken() (string, error) {
 	env, err := LoadEnv()
 	if err != nil {
 		return "", err
@@ -44,8 +44,8 @@ func TokenGet() (string, error) {
 	return adminAuth.Token, nil
 }
 
-func SchedulerGet(pbSchedulerUrl string, schedulerId string, schedulerResponse *entity.SchedulerResponse) error {
-	token, err := TokenGet()
+func GetScheduler(pbSchedulerUrl string, schedulerId string, schedulerResponse *entity.SchedulerResponse) error {
+	token, err := GetToken()
 	if err != nil {
 		return err
 	}

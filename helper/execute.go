@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gopkg.in/validator.v2"
 	"jupyter-hub-executor/entity"
+	"time"
 )
 
 type JupyterHandler struct {
@@ -45,7 +46,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		}
 	}
 
-	token, err := TokenGet()
+	token, err := GetToken()
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
@@ -68,7 +69,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	var schedulerResponse entity.SchedulerResponse
 
 	// Get scheduler details
-	err = SchedulerGet(pbSchedulerUrl, *schedulerId, &schedulerResponse)
+	err = GetScheduler(pbSchedulerUrl, *schedulerId, &schedulerResponse)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -101,8 +102,6 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	if port == 0 {
 		return fiber.NewError(fiber.StatusInternalServerError, "Jupyter port is not set")
 	}
-
-	// url with port
 
 	url = jupyterUrl + ":" + fmt.Sprint(port) + "/user/" + user.Username + "/api/contents"
 	fmt.Println("Jupyter:", url)
@@ -145,14 +144,54 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	for _, cell := range notebook.Content.Cells {
-		fmt.Println("Type:", cell.CellType)
-		fmt.Println("Source:", cell.Source)
-	}
+	// Get kernel
+	now := time.Now()
+	apiURL := jupyterUrl + ":" + fmt.Sprint(port) + "/user/" + user.Username + "/api"
+	sessionUrl := apiURL + "/sessions?" + fmt.Sprint(now.Unix())
+
+	kernelID, err := GetKernel(sessionUrl, pathNotebook, headers)
+	fmt.Println("Kernel ID:", kernelID)
+
+	// Execute notebook
+	go func() {
+		// Your notebook execution code here
+		cells := notebook.Content.Cells
+		jupyterWS := env.JupyterWs + ":" + fmt.Sprint(port)
+
+		results, err := ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL)
+		if err != nil {
+			// Log or handle error if notebook execution fails
+			fmt.Println("Notebook execution error:", err)
+			return
+		}
+
+		// Process results after execution
+		countOK := 0
+		countError := 0
+		count := len(results)
+
+		for _, item := range results {
+			if item.Status == "ok" {
+				countOK++
+			} else {
+				countError++
+			}
+		}
+
+		// Print OK, Error, Total
+		fmt.Println("OK:", countOK, "Error:", countError, "Total:", count)
+
+		// Further processing or logging can be done here
+
+		// Example: Store results in a database, if required
+
+	}()
 
 	contentType := response.Header.Get("Content-Type")
 
 	c.Set("Content-Type", contentType)
 
-	return c.Send(body)
+	msg := "Notebook execution initiated"
+
+	return c.SendString(msg)
 }

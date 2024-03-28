@@ -84,3 +84,19 @@ type Notebook struct {
 	Writable bool   `json:"writable"`
 	Type     string `json:"type"`
 }
+
+type CellResult struct {
+	Cell       int    `json:"cell"`
+	CellType   string `json:"cell_type"`
+	CellValue  string `json:"cell-value"`
+	Status     string `json:"status"`
+	Message    string `json:"msg"`
+	Additional map[string]interface{}
+}
+
+type SessionResponse struct {
+	Kernel struct {
+		ID string `json:"id"`
+	} `json:"kernel"`
+	Path string `json:"path"`
+}

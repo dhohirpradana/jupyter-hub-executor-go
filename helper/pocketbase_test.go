@@ -6,7 +6,7 @@ import (
 )
 
 func TestPocketbase(t *testing.T) {
-	token, err := TokenGet()
+	token, err := GetToken()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
