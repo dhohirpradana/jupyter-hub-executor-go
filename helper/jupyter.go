@@ -114,9 +114,9 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 	}
 }
 
-func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL string) ([]entity.CellResult, error) {
+func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL string, results *[]entity.CellResult) error {
 	var wg sync.WaitGroup
-	var results []entity.CellResult
+	//var results []entity.CellResult
 
 	for index, cell := range cells {
 		wg.Add(1)
@@ -128,7 +128,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 			if cellType == "code" && cellSource != "" {
 				res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
 				if err != nil {
-					results = append(results, entity.CellResult{
+					*results = append(*results, entity.CellResult{
 						Cell:      i + 1,
 						CellType:  cellType,
 						CellValue: cellSource,
@@ -136,7 +136,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 						Message:   err.Error(),
 					})
 				} else {
-					results = append(results, entity.CellResult{
+					*results = append(*results, entity.CellResult{
 						Cell:       i + 1,
 						CellType:   cellType,
 						CellValue:  cellSource,
@@ -146,7 +146,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 					})
 				}
 			} else {
-				results = append(results, entity.CellResult{
+				*results = append(*results, entity.CellResult{
 					Cell:      i + 1,
 					CellType:  cellType,
 					CellValue: cellSource,
@@ -159,7 +159,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 
 	wg.Wait()
 
-	return results, nil
+	return nil
 }
 
 func GetKernel(apiURL string, pathNotebook string, headers map[string]string) (string, error) {

@@ -3,9 +3,11 @@ package helper
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
+	"strconv"
 )
 
 func GetToken() (string, error) {
@@ -44,7 +46,7 @@ func GetToken() (string, error) {
 	return adminAuth.Token, nil
 }
 
-func GetScheduler(pbSchedulerUrl string, schedulerId string, schedulerResponse *entity.SchedulerResponse) error {
+func GetScheduler(pbSchedulerUrl, schedulerId string, schedulerResponse *entity.SchedulerResponse) error {
 	token, err := GetToken()
 	if err != nil {
 		return err
@@ -70,6 +72,45 @@ func GetScheduler(pbSchedulerUrl string, schedulerId string, schedulerResponse *
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
+
+	return nil
+}
+
+func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) error {
+	// status: success and failed
+	token, err := GetToken()
+	if err != nil {
+		return err
+	}
+
+	updateBody := struct {
+		Status string `json:"status"`
+	}{
+		Status: status,
+	}
+
+	body, err := json.Marshal(updateBody)
+	if err != nil {
+		return err
+	}
+
+	headers := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + token,
+	}
+
+	url := pbSchedulerUrl + "/" + schedulerId
+
+	resp, body, err := HTTPRequest(fiber.MethodPatch, url, bytes.NewReader(body), headers)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Response Code:", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		return errors.New("Status: " + strconv.Itoa(resp.StatusCode))
+	}
+	//fmt.Println("Body:", body)
 
 	return nil
 }

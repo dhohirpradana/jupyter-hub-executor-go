@@ -103,7 +103,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		return fiber.NewError(fiber.StatusInternalServerError, "Jupyter port is not set")
 	}
 
-	url = jupyterUrl + ":" + fmt.Sprint(port) + "/user/" + user.Username + "/api/contents"
+	url = jupyterUrl + ":" + fmt.Sprint(port) + "/user/jupyter/api/contents"
 	fmt.Println("Jupyter:", url)
 
 	token = env.JupyterToken
@@ -128,7 +128,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	//fmt.Println("Directory Created:", directory.Created)
 
 	// Get notebook details
-	url = jupyterUrl + ":" + fmt.Sprint(port) + "/user/" + user.Username + "/api/contents/" + pathNotebook
+	url = jupyterUrl + ":" + fmt.Sprint(port) + "/user/jupyter/api/contents/" + pathNotebook
 
 	response, body, err = HTTPRequest(fiber.MethodGet, url, nil, headers)
 	if err != nil {
@@ -146,46 +146,57 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	// Get kernel
 	now := time.Now()
-	apiURL := jupyterUrl + ":" + fmt.Sprint(port) + "/user/" + user.Username + "/api"
+	apiURL := jupyterUrl + ":" + fmt.Sprint(port) + "/user/jupyter/api"
 	sessionUrl := apiURL + "/sessions?" + fmt.Sprint(now.Unix())
 
 	kernelID, err := GetKernel(sessionUrl, pathNotebook, headers)
 	fmt.Println("Kernel ID:", kernelID)
 
 	// Execute notebook
-	go func() {
-		// Your notebook execution code here
-		cells := notebook.Content.Cells
-		jupyterWS := env.JupyterWs + ":" + fmt.Sprint(port)
+	cells := notebook.Content.Cells
+	jupyterWS := env.JupyterWs + ":" + fmt.Sprint(port)
 
-		results, err := ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL)
+	results := &[]entity.CellResult{}
+
+	err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, results)
+	if err != nil {
+		// Log or handle error if notebook execution fails
+		fmt.Println("Notebook execution error:", err)
+		return
+	}
+
+	// Process results after execution
+	countOK := 0
+	countError := 0
+	count := len(*results)
+
+	for _, item := range *results {
+		if item.Status == "ok" {
+			countOK++
+		} else {
+			countError++
+		}
+	}
+
+	if countError == 0 {
+		err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
 		if err != nil {
-			// Log or handle error if notebook execution fails
-			fmt.Println("Notebook execution error:", err)
-			return
+			fmt.Println(err)
 		}
-
-		// Process results after execution
-		countOK := 0
-		countError := 0
-		count := len(results)
-
-		for _, item := range results {
-			if item.Status == "ok" {
-				countOK++
-			} else {
-				countError++
-			}
+	} else {
+		err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
+		if err != nil {
+			fmt.Println(err)
 		}
+	}
 
-		// Print OK, Error, Total
-		fmt.Println("OK:", countOK, "Error:", countError, "Total:", count)
-
-		// Further processing or logging can be done here
-
-		// Example: Store results in a database, if required
-
-	}()
+	// Print OK, Error, Total
+	fmt.Println("OK:", countOK, "Error:", countError, "Total:", count)
 
 	contentType := response.Header.Get("Content-Type")
 
