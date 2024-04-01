@@ -10,6 +10,7 @@ import (
 	"io"
 	"jupyter-hub-executor/entity"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 )
@@ -174,13 +175,24 @@ func GetKernel(apiURL string, pathNotebook string, headers map[string]string) (s
 		return "", errors.New("no kernels found")
 	}
 
-	var kernelID string
-	for _, item := range sessions {
-		if item.Path == pathNotebook {
-			kernelID = item.Kernel.ID
-			break
-		}
-	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(sessions), func(i, j int) {
+		sessions[i], sessions[j] = sessions[j], sessions[i]
+	})
+
+	fmt.Println("Sessions length:", len(sessions))
+
+	//var kernelID string
+	//for _, item := range sessions {
+	//fmt.Println("Kernel", item.Kernel.ID, "Path:", item.Path)
+	//if item.Path == pathNotebook {
+	//	kernelID = item.Kernel.ID
+	//	break
+	//}
+	//}
+
+	kernelID := sessions[0].Kernel.ID
+	//fmt.Println(kernelID)
 
 	return kernelID, nil
 }
