@@ -90,7 +90,7 @@ type CellResult struct {
 	CellType   string `json:"cell_type"`
 	CellValue  string `json:"cell-value"`
 	Status     string `json:"status"`
-	Message    string `json:"msg"`
+	Message    []any  `json:"msg"`
 	Additional map[string]interface{}
 }
 

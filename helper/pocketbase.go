@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
-	"strconv"
 )
 
 func GetToken() (string, error) {
@@ -106,9 +105,9 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) error {
 		return err
 	}
 
-	fmt.Println("Response Code:", resp.StatusCode)
+	//fmt.Println("Response Code:", resp.StatusCode)
 	if resp.StatusCode != 200 {
-		return errors.New("Status: " + strconv.Itoa(resp.StatusCode))
+		return errors.New("status code not 200")
 	}
 	//fmt.Println("Body:", body)
 

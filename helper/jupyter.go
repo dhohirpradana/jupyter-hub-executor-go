@@ -11,11 +11,10 @@ import (
 	"jupyter-hub-executor/entity"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 )
 
-func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]interface{}, error) {
+func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]any, error) {
 	uuid4 := uuid.New()
 	msgID := uuid.New()
 	now := time.Now()
@@ -25,8 +24,8 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 	//fmt.Println("uri", uri)
 
 	// Prepare message
-	message := map[string]interface{}{
-		"header": map[string]interface{}{
+	message := map[string]any{
+		"header": map[string]any{
 			"date":     formattedDate,
 			"msg_id":   msgID,
 			"msg_type": "execute_request",
@@ -34,24 +33,24 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 			"username": "",
 			"version":  "5.2",
 		},
-		"parent_header": map[string]interface{}{},
-		"metadata": map[string]interface{}{
+		"parent_header": map[string]any{},
+		"metadata": map[string]any{
 			"editable":     true,
-			"slideshow":    map[string]interface{}{"slide_type": ""},
-			"tags":         []interface{}{},
+			"slideshow":    map[string]any{"slide_type": ""},
+			"tags":         []any{},
 			"trusted":      true,
-			"deletedCells": []interface{}{},
+			"deletedCells": []any{},
 			"recordTiming": false,
 		},
-		"content": map[string]interface{}{
+		"content": map[string]any{
 			"code":             cellSource,
 			"silent":           false,
 			"store_history":    true,
-			"user_expressions": map[string]interface{}{},
+			"user_expressions": map[string]any{},
 			"allow_stdin":      true,
 			"stop_on_error":    true,
 		},
-		"buffers": []interface{}{},
+		"buffers": []any{},
 	}
 
 	messageJSON, err := json.Marshal(message)
@@ -86,78 +85,71 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 			return nil, err
 		}
 
-		var responseJSON map[string]interface{}
+		var responseJSON map[string]any
 		if err := json.Unmarshal(response, &responseJSON); err != nil {
 			return nil, err
 		}
 
-		content := responseJSON["content"].(map[string]interface{})
-		msgState := responseJSON["header"].(map[string]interface{})["msg_type"].(string)
+		content := responseJSON["content"].(map[string]any)
+		msgState := responseJSON["header"].(map[string]any)["msg_type"].(string)
 
 		if msgState == "input_request" {
 			restartKernel(kernel, apiURL, token)
-			return map[string]interface{}{"status": "error", "msg": "input prompt"}, nil
+			return map[string]any{"status": "error", "msg": "input prompt"}, errors.New("input prompt error")
 		}
 
 		if msgState == "error" {
-			errMsg := content["traceback"].(string)
-			return map[string]interface{}{"status": "error", "msg": errMsg}, nil
+			errMsg := content["traceback"]
+			return map[string]any{"status": "error", "msg": errMsg}, errors.New("traceback error")
 		}
 
 		if status, ok := content["status"].(string); ok {
 			if status == "error" {
-				errMsg := content["traceback"].(string)
-				return map[string]interface{}{"status": "error", "msg": errMsg}, nil
+				errMsg := content["traceback"]
+				return map[string]any{"status": "error", "msg": errMsg}, errors.New("traceback error")
 			}
-			return map[string]interface{}{"status": status, "msg": "Success"}, nil
+			return map[string]any{"status": status, "msg": "Success"}, nil
 		}
 	}
 }
 
 func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL string, results *[]entity.CellResult) error {
-	var wg sync.WaitGroup
-	//var results []entity.CellResult
-
-	for index, cell := range cells {
-		wg.Add(1)
+	for i, cell := range cells {
+		//wg.Add(1)
 		cellSource := cell.Source
 		cellType := cell.CellType
 
-		go func(i int, cell entity.CodeCell) {
-			defer wg.Done()
-			if cellType == "code" && cellSource != "" {
-				res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
-				if err != nil {
-					*results = append(*results, entity.CellResult{
-						Cell:      i + 1,
-						CellType:  cellType,
-						CellValue: cellSource,
-						Status:    "error",
-						Message:   err.Error(),
-					})
-				} else {
-					*results = append(*results, entity.CellResult{
-						Cell:       i + 1,
-						CellType:   cellType,
-						CellValue:  cellSource,
-						Status:     res["status"].(string),
-						Message:    res["msg"].(string),
-						Additional: res,
-					})
-				}
+		if cellType == "code" && cellSource != "" {
+			res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
+			if err != nil {
+				*results = append(*results, entity.CellResult{
+					Cell:      i + 1,
+					CellType:  cellType,
+					CellValue: cellSource,
+					Status:    "error",
+					Message:   []any{res["msg"]},
+				})
+				break
 			} else {
 				*results = append(*results, entity.CellResult{
 					Cell:      i + 1,
 					CellType:  cellType,
 					CellValue: cellSource,
-					Status:    "ok",
-					Message:   "Success",
+					Status:    res["status"].(string),
+					Message:   []any{res["msg"]},
+					//Additional: res,
 				})
 			}
-		}(index, cell)
+		} else {
+			*results = append(*results, entity.CellResult{
+				Cell:      i + 1,
+				CellType:  cellType,
+				CellValue: cellSource,
+				Status:    "ok",
+				Message:   []any{"Success"},
+			})
+		}
 	}
-
-	wg.Wait()
 
 	return nil
 }

@@ -160,49 +160,50 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 	}
-
-	err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, results)
-	if err != nil {
-		// Log or handle error if notebook execution fails
-		fmt.Println("Notebook execution error:", err)
-		return
-	}
-
-	// Process results after execution
-	countOK := 0
-	countError := 0
-	count := len(*results)
-
-	for _, item := range *results {
-		if item.Status == "ok" {
-			countOK++
-		} else {
-			countError++
-		}
-	}
-
-	if countError == 0 {
-		err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
-		if err != nil {
-			fmt.Println(err)
-		}
-	} else {
-		err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-
-	// Print OK, Error, Total
-	fmt.Println("OK:", countOK, "Error:", countError, "Total:", count)
 
 	contentType := response.Header.Get("Content-Type")
 
 	c.Set("Content-Type", contentType)
 
-	msg := "Notebook execution initiated"
+	// Process results after execution
+	countOK := 0
+	countError := 0
+	count := len(cells)
 
-	return c.SendString(msg)
+	go func() {
+		start := time.Now()
+		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, results)
+		if err != nil {
+			fmt.Println("Notebook execution error:", err)
+			return
+		}
+
+		for _, item := range *results {
+			if item.Status == "ok" {
+				countOK++
+			} else {
+				countError++
+			}
+		}
+
+		if countError == 0 {
+			err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		} else {
+			err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
+
+		// Print OK, Error, Executed, Total, Execution time
+		elapsed := time.Since(start)
+		fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
+	}()
+
+	return c.SendString("Notebook execution initiated.")
 }
