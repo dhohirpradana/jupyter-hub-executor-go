@@ -3,7 +3,6 @@ package helper
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
@@ -75,11 +74,11 @@ func GetScheduler(pbSchedulerUrl, schedulerId string, schedulerResponse *entity.
 	return nil
 }
 
-func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) error {
+func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) {
 	// status: success and failed
 	token, err := GetToken()
 	if err != nil {
-		return err
+		fmt.Println(err.Error())
 	}
 
 	updateBody := struct {
@@ -90,7 +89,7 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) error {
 
 	body, err := json.Marshal(updateBody)
 	if err != nil {
-		return err
+		fmt.Println(err.Error())
 	}
 
 	headers := map[string]string{
@@ -102,14 +101,12 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) error {
 
 	resp, body, err := HTTPRequest(fiber.MethodPatch, url, bytes.NewReader(body), headers)
 	if err != nil {
-		return err
+		fmt.Println(err.Error())
 	}
 
 	//fmt.Println("Response Code:", resp.StatusCode)
 	if resp.StatusCode != 200 {
-		return errors.New("status code not 200")
+		fmt.Println(err.Error())
 	}
 	//fmt.Println("Body:", body)
-
-	return nil
 }

@@ -158,10 +158,11 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	results := &[]entity.CellResult{}
 
-	err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	go func() {
+		Mutex.Lock()
+		defer Mutex.Unlock()
+		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
+	}()
 
 	contentType := response.Header.Get("Content-Type")
 
@@ -174,7 +175,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	go func() {
 		start := time.Now()
-		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, results)
+		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, *schedulerId, results)
 		if err != nil {
 			fmt.Println("Notebook execution error:", err)
 			return
@@ -189,15 +190,17 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		}
 
 		if countError == 0 {
-			err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+			go func() {
+				Mutex.Lock()
+				defer Mutex.Unlock()
+				UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
+			}()
 		} else {
-			err = UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+			go func() {
+				Mutex.Unlock()
+				defer Mutex.Unlock()
+				go UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
+			}()
 		}
 
 		// Print OK, Error, Executed, Total, Execution time

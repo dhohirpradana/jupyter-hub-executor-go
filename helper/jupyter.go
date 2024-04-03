@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -114,11 +115,17 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 	}
 }
 
-func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL string, results *[]entity.CellResult) error {
+func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, schedulerId string, results *[]entity.CellResult) error {
 	for i, cell := range cells {
 		//wg.Add(1)
 		cellSource := cell.Source
 		cellType := cell.CellType
+
+		go func() {
+			Mutex.Lock()
+			defer Mutex.Unlock()
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, strconv.Itoa(i+1))
+		}()
 
 		if cellType == "code" && cellSource != "" {
 			res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
