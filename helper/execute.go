@@ -203,7 +203,6 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 			}()
 		}
 
-		// Print OK, Error, Executed, Total, Execution time
 		elapsed := time.Since(start)
 		fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
 	}()
