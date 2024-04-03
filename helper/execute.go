@@ -158,11 +158,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	results := &[]entity.CellResult{}
 
-	go func() {
-		Mutex.Lock()
-		defer Mutex.Unlock()
-		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
-	}()
+	UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
 
 	contentType := response.Header.Get("Content-Type")
 
@@ -173,39 +169,49 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	countError := 0
 	count := len(cells)
 
-	go func() {
-		start := time.Now()
-		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, *schedulerId, results)
-		if err != nil {
-			fmt.Println("Notebook execution error:", err)
-			return
-		}
+	var esCellResults []entity.ESCellResult
 
-		for _, item := range *results {
-			if item.Status == "ok" {
-				countOK++
-			} else {
-				countError++
-			}
-		}
+	start := time.Now()
+	err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, *schedulerId, results)
+	if err != nil {
+		fmt.Println("Notebook execution error:", err)
+		return
+	}
 
-		if countError == 0 {
-			go func() {
-				Mutex.Lock()
-				defer Mutex.Unlock()
-				UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
-			}()
+	for _, result := range *results {
+		if result.Status == "ok" {
+			countOK++
 		} else {
-			go func() {
-				Mutex.Unlock()
-				defer Mutex.Unlock()
-				go UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
-			}()
+			countError++
 		}
 
-		elapsed := time.Since(start)
-		fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
-	}()
+		esCellResults = append(esCellResults, entity.ESCellResult{
+			Cell:     result.Cell,
+			CellType: result.CellType,
+			Status:   result.Status,
+			Message:  result.Message,
+		})
+	}
+
+	if countError == 0 {
+		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
+	} else {
+		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
+	}
+
+	elapsed := time.Since(start)
+	fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
+
+	var esScheduler ESScheduler
+
+	esScheduler.SchedulerId = *schedulerId
+	esScheduler.Path = pathNotebook
+	esScheduler.UserId = userID
+	esScheduler.CellResults = esCellResults
+
+	//fmt.Println(esScheduler)
+
+	esScheduler.StoreToES()
 
 	return c.SendString("Notebook execution initiated.")
 }

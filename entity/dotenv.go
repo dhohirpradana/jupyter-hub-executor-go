@@ -12,6 +12,8 @@ type ENV struct {
 	JupyterWs    string
 	JupyterToken string
 
-	ElasticUrl string
-	EventUrl   string
+	ElasticUrl   string
+	ElasticIndex string
+
+	EventUrl string
 }

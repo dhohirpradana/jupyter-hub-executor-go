@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 )
-
-var Mutex = &sync.Mutex{}
 
 func HTTPRequest(method string, url string, body io.Reader, headers map[string]string) (*http.Response, []byte, error) {
 	req, err := http.NewRequest(method, url, body)

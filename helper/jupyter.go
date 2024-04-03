@@ -121,21 +121,22 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 		cellSource := cell.Source
 		cellType := cell.CellType
 
-		go func() {
-			Mutex.Lock()
-			defer Mutex.Unlock()
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, strconv.Itoa(i+1))
-		}()
+		UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, strconv.Itoa(i+1))
 
 		if cellType == "code" && cellSource != "" {
 			res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
+			var msgSlice []any
+
+			if msg, ok := res["msg"].([]any); ok {
+				msgSlice = msg
+			}
 			if err != nil {
 				*results = append(*results, entity.CellResult{
 					Cell:      i + 1,
 					CellType:  cellType,
 					CellValue: cellSource,
 					Status:    "error",
-					Message:   []any{res["msg"]},
+					Message:   msgSlice,
 				})
 				break
 			} else {
@@ -144,7 +145,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 					CellType:  cellType,
 					CellValue: cellSource,
 					Status:    res["status"].(string),
-					Message:   []any{res["msg"]},
+					Message:   msgSlice,
 					//Additional: res,
 				})
 			}
@@ -154,7 +155,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 				CellType:  cellType,
 				CellValue: cellSource,
 				Status:    "ok",
-				Message:   []any{"Success"},
+				Message:   []any{},
 			})
 		}
 	}

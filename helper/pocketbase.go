@@ -81,10 +81,18 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) {
 		fmt.Println(err.Error())
 	}
 
+	cell := "1"
+	if status != "success" && status != "failed" && status != "running" {
+		status = "running"
+		cell = status
+	}
+
 	updateBody := struct {
 		Status string `json:"status"`
+		Cell   string `json:"cell"`
 	}{
 		Status: status,
+		Cell:   cell,
 	}
 
 	body, err := json.Marshal(updateBody)

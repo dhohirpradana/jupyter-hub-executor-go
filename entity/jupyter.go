@@ -86,12 +86,11 @@ type Notebook struct {
 }
 
 type CellResult struct {
-	Cell       int    `json:"cell"`
-	CellType   string `json:"cell_type"`
-	CellValue  string `json:"cell-value"`
-	Status     string `json:"status"`
-	Message    []any  `json:"msg"`
-	Additional map[string]interface{}
+	Cell      int    `json:"cell"`
+	CellType  string `json:"cell_type"`
+	CellValue string `json:"cell-value"`
+	Status    string `json:"status"`
+	Message   []any  `json:"msg"`
 }
 
 type SessionResponse struct {

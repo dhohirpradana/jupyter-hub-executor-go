@@ -20,6 +20,7 @@ func LoadEnv() (entity.ENV, error) {
 	env.EventUrl = os.Getenv("EVENT_URL")
 	env.JupyterToken = os.Getenv("JUPYTER_TOKEN")
 	env.ElasticUrl = os.Getenv("ELASTIC_URL")
+	env.ElasticIndex = os.Getenv("ELASTIC_INDEX")
 	env.PocketbaseUserUrl = os.Getenv("PB_USER_URL")
 	env.PocketbaseSchedulerUrl = os.Getenv("PB_SCHEDULER_URL")
 	env.PocketbaseNotificationUrl = os.Getenv("PB_NOTIFICATION_URL")
