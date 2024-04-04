@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
+	"time"
 )
 
 func GetToken() (string, error) {
@@ -87,12 +88,16 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) {
 		cell = status
 	}
 
+	t := time.Now()
+
 	updateBody := struct {
-		Status string `json:"status"`
-		Cell   string `json:"cell"`
+		Status  string    `json:"status"`
+		LastRun time.Time `json:"lastRun"`
+		Cell    string    `json:"cell"`
 	}{
-		Status: status,
-		Cell:   cell,
+		Status:  status,
+		LastRun: t,
+		Cell:    cell,
 	}
 
 	body, err := json.Marshal(updateBody)
