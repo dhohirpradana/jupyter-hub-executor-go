@@ -16,7 +16,7 @@ type ESScheduler struct {
 	SchedulerId string                `json:"scheduler_id"`
 	CellResults []entity.ESCellResult `json:"cell_results"`
 	Date        string                `json:"date"`
-	Ok          int                   `json:"ok"`
+	Ok          int                   `json:"success"`
 	Error       int                   `json:"error"`
 	Executed    int                   `json:"executed"`
 	Total       int                   `json:"total"`
