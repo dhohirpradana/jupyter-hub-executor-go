@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
+	"strconv"
 	"time"
 )
 
@@ -75,17 +76,11 @@ func GetScheduler(pbSchedulerUrl, schedulerId string, schedulerResponse *entity.
 	return nil
 }
 
-func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) {
+func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string, cellIndex int) {
 	// status: success and failed
 	token, err := GetToken()
 	if err != nil {
 		fmt.Println(err.Error())
-	}
-
-	cell := "1"
-	if status != "success" && status != "failed" && status != "running" {
-		status = "running"
-		cell = status
 	}
 
 	t := time.Now()
@@ -97,7 +92,7 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string) {
 	}{
 		Status:  status,
 		LastRun: t,
-		Cell:    cell,
+		Cell:    strconv.Itoa(cellIndex + 1),
 	}
 
 	body, err := json.Marshal(updateBody)

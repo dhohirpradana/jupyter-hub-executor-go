@@ -158,7 +158,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	results := &[]entity.CellResult{}
 
-	UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running")
+	//UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running", -2)
 
 	contentType := response.Header.Get("Content-Type")
 
@@ -195,9 +195,9 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		}
 
 		if countError == 0 {
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "success")
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "success", -2)
 		} else {
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "failed")
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "failed", -2)
 		}
 
 		elapsed := time.Since(start)

@@ -12,7 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
+	"sync"
 	"time"
 )
 
@@ -116,12 +116,19 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 }
 
 func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, schedulerId string, results *[]entity.CellResult) error {
+	wg := sync.WaitGroup{}
 	for i, cell := range cells {
+		wg.Add(1)
 		//wg.Add(1)
 		cellSource := cell.Source
 		cellType := cell.CellType
 
-		UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, strconv.Itoa(i+1))
+		fmt.Println(i)
+
+		go func() {
+			defer wg.Done()
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running", i)
+		}()
 
 		if cellType == "code" && cellSource != "" {
 			res, err := ExecuteWS(cellSource, kernelID, token, jupyterWS, apiURL)
@@ -159,6 +166,8 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 			})
 		}
 	}
+
+	wg.Wait()
 
 	return nil
 }
