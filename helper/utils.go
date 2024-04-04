@@ -51,3 +51,15 @@ func UnmarshalResponse(body []byte, v interface{}) error {
 	}
 	return nil
 }
+
+//func GetNextRun(cronExpr string, tTime time.Time) (time.Time, error) {
+//	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+//	schedule, err := specParser.Parse(cronExpr)
+//	if err != nil {
+//		return time.Now(), err
+//	}
+//
+//	nextRunTime := schedule.Next(tTime)
+//
+//	return nextRunTime, nil
+//}

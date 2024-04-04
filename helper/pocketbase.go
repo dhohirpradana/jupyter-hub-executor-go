@@ -7,7 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"jupyter-hub-executor/entity"
 	"strconv"
-	"time"
 )
 
 func GetToken() (string, error) {
@@ -76,28 +75,69 @@ func GetScheduler(pbSchedulerUrl, schedulerId string, schedulerResponse *entity.
 	return nil
 }
 
-func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string, cellIndex int) {
+func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string, cellIndex int, lastRun, lastFinish any) {
 	// status: success and failed
 	token, err := GetToken()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	t := time.Now()
+	var updateBody []byte
 
-	updateBody := struct {
-		Status  string    `json:"status"`
-		LastRun time.Time `json:"lastRun"`
-		Cell    string    `json:"cell"`
-	}{
-		Status:  status,
-		LastRun: t,
-		Cell:    strconv.Itoa(cellIndex + 1),
-	}
+	if lastRun != nil {
+		sBody := struct {
+			Status     string `json:"status"`
+			LastRun    any    `json:"lastRun"`
+			LastFinish any    `json:"lastFinish"`
+			Cell       string `json:"cell"`
+		}{
+			Status:     status,
+			Cell:       strconv.Itoa(cellIndex + 1),
+			LastRun:    lastRun,
+			LastFinish: nil,
+		}
 
-	body, err := json.Marshal(updateBody)
-	if err != nil {
-		fmt.Println(err.Error())
+		body, err := json.Marshal(sBody)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		updateBody = body
+	} else if lastFinish != nil {
+		sBody := struct {
+			Status     string `json:"status"`
+			LastFinish any    `json:"lastFinish"`
+			Cell       string `json:"cell"`
+		}{
+			Status:     status,
+			Cell:       strconv.Itoa(cellIndex + 1),
+			LastFinish: lastFinish,
+		}
+
+		body, err := json.Marshal(sBody)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		updateBody = body
+	} else {
+		sBody := struct {
+			Status string `json:"status"`
+			Cell   string `json:"cell"`
+		}{
+			Status: status,
+			Cell:   strconv.Itoa(cellIndex + 1),
+		}
+
+		body, err := json.Marshal(sBody)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		updateBody = body
 	}
 
 	headers := map[string]string{
@@ -107,14 +147,16 @@ func UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, status string, cellIndex
 
 	url := pbSchedulerUrl + "/" + schedulerId
 
-	resp, body, err := HTTPRequest(fiber.MethodPatch, url, bytes.NewReader(body), headers)
+	resp, _, err := HTTPRequest(fiber.MethodPatch, url, bytes.NewReader(updateBody), headers)
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
 
 	//fmt.Println("Response Code:", resp.StatusCode)
 	if resp.StatusCode != 200 {
 		fmt.Println(err.Error())
+		return
 	}
 	//fmt.Println("Body:", body)
 }

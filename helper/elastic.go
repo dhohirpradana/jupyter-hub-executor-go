@@ -16,6 +16,7 @@ type ESScheduler struct {
 	SchedulerId string                `json:"scheduler_id"`
 	CellResults []entity.ESCellResult `json:"cell_results"`
 	Date        string                `json:"date"`
+	DateFinish  string                `json:"date_finish"`
 	Ok          int                   `json:"success"`
 	Error       int                   `json:"error"`
 	Executed    int                   `json:"executed"`
@@ -57,9 +58,10 @@ func (a ESScheduler) StoreToES() {
 		return
 	}
 
-	t := time.Now()
-	formattedTime := t.UTC().Format("2006-01-02T15:04:05.999999Z")
-	a.Date = formattedTime
+	start := time.Now()
+	finishTime := start.UTC().Format("2006-01-02T15:04:05.999999Z")
+
+	a.DateFinish = finishTime
 
 	body, err := json.Marshal(a)
 	if err != nil {
@@ -71,7 +73,7 @@ func (a ESScheduler) StoreToES() {
 	res, err := es.Index(
 		env.ElasticIndex,
 		bytes.NewReader(body),
-		es.Index.WithDocumentID(fmt.Sprintf("%d", t.UnixNano())),
+		es.Index.WithDocumentID(fmt.Sprintf("%d", time.Now().UnixNano())),
 	)
 
 	if err != nil {

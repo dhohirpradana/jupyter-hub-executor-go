@@ -117,17 +117,20 @@ func ExecuteWS(cellSource, kernel, token, jupyterWS, apiURL string) (map[string]
 
 func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, schedulerId string, results *[]entity.CellResult) error {
 	wg := sync.WaitGroup{}
+
+	now := time.Now()
+
+	UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running", -1, now, nil)
+
 	for i, cell := range cells {
 		wg.Add(1)
 		//wg.Add(1)
 		cellSource := cell.Source
 		cellType := cell.CellType
 
-		fmt.Println(i)
-
 		go func() {
 			defer wg.Done()
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running", i)
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running", i, nil, nil)
 		}()
 
 		if cellType == "code" && cellSource != "" {

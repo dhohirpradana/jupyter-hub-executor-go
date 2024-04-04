@@ -173,6 +173,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	go func() {
 		start := time.Now()
+		runTime := start.UTC().Format("2006-01-02T15:04:05.999999Z")
 		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, schedulerId, results)
 		if err != nil {
 			fmt.Println("Notebook execution error:", err)
@@ -195,9 +196,9 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		}
 
 		if countError == 0 {
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "success", -2)
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "success", -2, nil, time.Now())
 		} else {
-			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "failed", -2)
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "failed", -2, nil, time.Now())
 		}
 
 		elapsed := time.Since(start)
@@ -214,6 +215,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		esScheduler.Executed = countOK + countError
 		esScheduler.Total = count
 		esScheduler.ElapsedTime = elapsed
+		esScheduler.Date = runTime
 
 		//fmt.Println(esScheduler)
 
