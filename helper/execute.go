@@ -21,7 +21,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	var jupyterHubExecutor *entity.JupyterHubExecutor
+	var jupyterHubExecutor entity.JupyterHubExecutor
 
 	if err := c.BodyParser(&jupyterHubExecutor); err != nil {
 		return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
@@ -35,13 +35,13 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		jupyterHubExecutor.Cron = true
 	}
 
-	cron := &jupyterHubExecutor.Cron
-	schedulerId := &jupyterHubExecutor.SchedulerId
-	cronExpression := &jupyterHubExecutor.CronExpression
+	cron := jupyterHubExecutor.Cron
+	schedulerId := jupyterHubExecutor.SchedulerId
+	cronExpression := jupyterHubExecutor.CronExpression
 	//user := &jupyterHubExecutor.User
 
-	if *cron {
-		if *cronExpression == "" {
+	if cron {
+		if cronExpression == "" {
 			return fiber.NewError(fiber.StatusUnprocessableEntity)
 		}
 	}
@@ -59,7 +59,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 		"Authorization": "Bearer " + token,
 	}
 
-	url := pbSchedulerUrl + "/" + *schedulerId
+	url := pbSchedulerUrl + "/" + schedulerId
 
 	response, body, err := HTTPRequest(fiber.MethodGet, url, nil, headers)
 	if err != nil {
@@ -69,7 +69,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	var schedulerResponse entity.SchedulerResponse
 
 	// Get scheduler details
-	err = GetScheduler(pbSchedulerUrl, *schedulerId, &schedulerResponse)
+	err = GetScheduler(pbSchedulerUrl, schedulerId, &schedulerResponse)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
@@ -158,7 +158,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	results := &[]entity.CellResult{}
 
-	UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "running")
+	UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "running")
 
 	contentType := response.Header.Get("Content-Type")
 
@@ -171,47 +171,54 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 
 	var esCellResults []entity.ESCellResult
 
-	start := time.Now()
-	err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, *schedulerId, results)
-	if err != nil {
-		fmt.Println("Notebook execution error:", err)
-		return
-	}
-
-	for _, result := range *results {
-		if result.Status == "ok" {
-			countOK++
-		} else {
-			countError++
+	go func() {
+		start := time.Now()
+		err = ExecuteNotebook(cells, kernelID, token, jupyterWS, apiURL, pbSchedulerUrl, schedulerId, results)
+		if err != nil {
+			fmt.Println("Notebook execution error:", err)
+			return
 		}
 
-		esCellResults = append(esCellResults, entity.ESCellResult{
-			Cell:     result.Cell,
-			CellType: result.CellType,
-			Status:   result.Status,
-			Message:  result.Message,
-		})
-	}
+		for _, result := range *results {
+			if result.Status == "ok" {
+				countOK++
+			} else {
+				countError++
+			}
 
-	if countError == 0 {
-		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "success")
-	} else {
-		UpdateSchedulerStatus(pbSchedulerUrl, *schedulerId, "failed")
-	}
+			esCellResults = append(esCellResults, entity.ESCellResult{
+				Cell:     result.Cell,
+				CellType: result.CellType,
+				Status:   result.Status,
+				Message:  result.Message,
+			})
+		}
 
-	elapsed := time.Since(start)
-	fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
+		if countError == 0 {
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "success")
+		} else {
+			UpdateSchedulerStatus(pbSchedulerUrl, schedulerId, "failed")
+		}
 
-	var esScheduler ESScheduler
+		elapsed := time.Since(start)
+		fmt.Println("OK:", countOK, "Error:", countError, "Executed:", countOK+countError, "Total:", count, "Execution time: %s\n", elapsed)
 
-	esScheduler.SchedulerId = *schedulerId
-	esScheduler.Path = pathNotebook
-	esScheduler.UserId = userID
-	esScheduler.CellResults = esCellResults
+		var esScheduler ESScheduler
 
-	//fmt.Println(esScheduler)
+		esScheduler.SchedulerId = schedulerId
+		esScheduler.Path = pathNotebook
+		esScheduler.UserId = userID
+		esScheduler.CellResults = esCellResults
+		esScheduler.Ok = countOK
+		esScheduler.Error = countError
+		esScheduler.Executed = countOK + countError
+		esScheduler.Total = count
+		esScheduler.ElapsedTime = elapsed
 
-	esScheduler.StoreToES()
+		//fmt.Println(esScheduler)
+
+		esScheduler.StoreToES()
+	}()
 
 	return c.SendString("Notebook execution initiated.")
 }

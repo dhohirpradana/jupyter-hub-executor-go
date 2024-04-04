@@ -5,32 +5,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/joho/godotenv"
 	"io"
 	"jupyter-hub-executor/entity"
-	"os"
 	"time"
 )
 
 type ESScheduler struct {
-	Path        string `json:"path"`
-	UserId      string `json:"uid"`
-	SchedulerId string `json:"scheduler_id"`
-	CellResults []entity.ESCellResult
-	Date        string `json:"date"`
+	Path        string                `json:"path"`
+	UserId      string                `json:"uid"`
+	SchedulerId string                `json:"scheduler_id"`
+	CellResults []entity.ESCellResult `json:"cell_results"`
+	Date        string                `json:"date"`
+	Ok          int                   `json:"ok"`
+	Error       int                   `json:"error"`
+	Executed    int                   `json:"executed"`
+	Total       int                   `json:"total"`
+	ElapsedTime time.Duration         `json:"elapsed_time"`
 }
 
 func getESClient() (*elasticsearch.Client, error) {
-	err := godotenv.Load(".env")
-
+	env, err := LoadEnv()
 	if err != nil {
-		return nil, err
+		fmt.Println(err.Error())
 	}
 
-	elasticUrl := os.Getenv("ELASTIC_URL")
+	//fmt.Println(env.ElasticUrl)
 
 	cfg := elasticsearch.Config{
-		Addresses: []string{elasticUrl},
+		Addresses: []string{env.ElasticUrl},
 	}
 	es, err := elasticsearch.NewClient(cfg)
 
@@ -41,8 +43,8 @@ func getESClient() (*elasticsearch.Client, error) {
 	return es, nil
 }
 
-func (a *ESScheduler) StoreToES() {
-	fmt.Println("A:", a)
+func (a ESScheduler) StoreToES() {
+	//fmt.Println("A:", a)
 
 	env, err := LoadEnv()
 	if err != nil {
@@ -52,6 +54,7 @@ func (a *ESScheduler) StoreToES() {
 	es, err := getESClient()
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
 
 	t := time.Now()
@@ -62,6 +65,8 @@ func (a *ESScheduler) StoreToES() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+
+	//fmt.Println(env.ElasticIndex)
 
 	res, err := es.Index(
 		env.ElasticIndex,
