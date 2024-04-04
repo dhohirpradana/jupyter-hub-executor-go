@@ -145,7 +145,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 					CellType:  cellType,
 					CellValue: cellSource,
 					Status:    res["status"].(string),
-					Message:   msgSlice,
+					Message:   nil,
 					//Additional: res,
 				})
 			}
@@ -155,7 +155,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 				CellType:  cellType,
 				CellValue: cellSource,
 				Status:    "ok",
-				Message:   []any{},
+				Message:   nil,
 			})
 		}
 	}
@@ -163,7 +163,7 @@ func ExecuteNotebook(cells []entity.CodeCell, kernelID, token, jupyterWS, apiURL
 	return nil
 }
 
-func GetKernel(apiURL string, pathNotebook string, headers map[string]string) (string, error) {
+func GetKernel(apiURL string, headers map[string]string) (string, error) {
 	now := time.Now()
 	sessionUrl := apiURL + "/sessions?" + fmt.Sprint(now.Unix())
 

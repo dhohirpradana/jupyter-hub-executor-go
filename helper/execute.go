@@ -149,7 +149,7 @@ func (h JupyterHandler) Execute(c *fiber.Ctx) (err error) {
 	apiURL := jupyterUrl + ":" + fmt.Sprint(port) + "/user/jupyter/api"
 	sessionUrl := apiURL + "/sessions?" + fmt.Sprint(now.Unix())
 
-	kernelID, err := GetKernel(sessionUrl, pathNotebook, headers)
+	kernelID, err := GetKernel(sessionUrl, headers)
 	fmt.Println("Kernel ID:", kernelID)
 
 	// Execute notebook
